@@ -5,7 +5,7 @@ import { api, type Product } from '../services/api';
 import { AssetAccessModal } from '../components/ProductAccessModal';
 
 export default function Marketplace() {
-  const { isConnected, address } = useWallet();
+  const { isConnected, address, walletClient } = useWallet();
   const { purchaseAsset, isPurchased, accessAsset } = useAssets();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(false);
@@ -53,13 +53,66 @@ export default function Marketplace() {
       alert('Please connect your wallet first');
       return;
     }
+
+    if (!walletClient) {
+      alert('Wallet client not available. Please reconnect your wallet.');
+      return;
+    }
+
     setLoading(true);
     try {
-      const result = await api.purchaseProduct(asset.product_id, address);
+      console.log(`Processing purchase of "${asset.title}" for $${asset.price} USDC through x402...`);
+
+      const result = await api.purchaseProduct(asset.product_id, address, walletClient);
       purchaseAsset(asset, result.sessionId);
-      alert(`Successfully purchased ${asset.title} for $${asset.price}! You now have 24-hour access.`);
+
+      alert(
+        `🎉 Purchase Successful!\n\n` +
+        `✅ "${asset.title}" purchased for $${asset.price} USDC\n` +
+        `💰 Payment sent directly to seller via x402\n` +
+        `📱 You now have access to this product!\n\n` +
+        `Check your Profile to access your purchased items.`
+      );
+
+      // Refresh the assets list to update purchase status
+      const response = await api.getProducts({
+        category: selectedCategory || undefined,
+        limit: 50,
+        offset: 0,
+      });
+      if (response.success) {
+        const mappedAssets: Asset[] = response.products.map((product: Product) => ({
+          product_id: product.product_id,
+          title: product.title,
+          description: product.description,
+          price: product.price,
+          seller_wallet: product.seller_wallet,
+          category: product.category || 'data',
+          file_url: product.file_url,
+          telegram_username: product.telegram_username || '@unknown',
+          created_at: product.created_at,
+        }));
+        setAssets(mappedAssets);
+      }
     } catch (error) {
-      alert(`Purchase failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Purchase failed:', error);
+
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+      if (errorMessage.includes('payment') || errorMessage.includes('USDC') || errorMessage.includes('transfer')) {
+        alert(
+          `💳 USDC Transfer Failed: ${errorMessage}\n\n` +
+          `❌ Could not transfer $${asset.price} USDC to complete the purchase.\n\n` +
+          `✅ Please ensure:\n` +
+          `• You have at least $${asset.price} USDC in your wallet\n` +
+          `• You're connected to Polygon Amoy testnet\n` +
+          `• Your wallet has enough MATIC for gas fees\n` +
+          `• You approve the transaction when prompted\n\n` +
+          `🔗 USDC Contract: 0x41e94eb019c0762f9bfcf9fb1e58725bfb0e7582`
+        );
+      } else {
+        alert(`❌ Purchase failed: ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -77,9 +130,9 @@ export default function Marketplace() {
     try {
       setViewingDetails(productId);
       const response = await api.getProductDetails(productId);
-      if (response.success) {
+      if (response.success && response.product) {
         const product = response.product;
-        alert(`Product Details:\n\nTitle: ${product.title}\nDescription: ${product.description}\nPrice: $${product.price}\nCategory: ${product.category}\nSeller: ${product.seller_wallet.slice(0, 10)}...\nContact: ${product.telegram_username}\nCreated: ${new Date(product.created_at).toLocaleDateString()}`);
+        alert(`Product Details:\n\nTitle: ${product.title}\nDescription: ${product.description}\nPrice: $${product.price}\nCategory: ${product.category || 'N/A'}\nSeller: ${product.seller_wallet.slice(0, 10)}...\nContact: ${product.telegram_username || 'N/A'}\nCreated: ${new Date(product.created_at).toLocaleDateString()}`);
       } else {
         alert('Failed to load product details');
       }

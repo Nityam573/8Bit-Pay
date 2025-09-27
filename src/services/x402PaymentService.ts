@@ -17,6 +17,23 @@ export interface ListingPaymentData {
   productTitle: string;
 }
 
+export interface PurchasePaymentData {
+  amount: number; // in USD (product price)
+  sellerWallet: string;
+  buyerWallet: string;
+  productId: string;
+  productTitle: string;
+}
+
+export interface RefundPaymentData {
+  amount: number; // in USD (refund amount)
+  sellerWallet: string; // sender (refunding party)
+  buyerWallet: string; // receiver (refund recipient)
+  purchaseId: string;
+  productTitle: string;
+  reason?: string;
+}
+
 export interface PaymentPayload {
   from: string;
   to: string;
@@ -45,6 +62,122 @@ export class X402PaymentService {
   constructor() {
     this.facilitatorUrl = import.meta.env.VITE_FACILITATOR_URL || "http://localhost:5401";
     this.paymentReceiverAddress = import.meta.env.VITE_PAYMENT_ADDRESS || "0x82886a663c3691f6e8E4B4194CF863De1C2c9cb4";
+  }
+
+  /**
+   * Process payment for purchasing a product through x402 protocol
+   * This creates a payment requirement and processes it through the facilitator
+   */
+  async processPurchasePayment(
+    walletClient: any,
+    paymentData: PurchasePaymentData
+  ): Promise<PaymentResult> {
+    try {
+      console.log('Processing x402 purchase payment...', paymentData);
+
+      // Convert USD amount to USDC
+      const usdcAmount = parseUnits(paymentData.amount.toString(), USDC_DECIMALS);
+
+      // Create payment requirement - buyer pays seller directly
+      const paymentRequirement: PaymentRequirement = {
+        scheme: 'exact',
+        network: 'polygon-amoy',
+        resource: `purchase:${paymentData.productId}`,
+        payTo: paymentData.sellerWallet, // Payment goes to seller
+        maxAmountRequired: usdcAmount.toString(),
+        description: `Purchase of "${paymentData.productTitle}" for $${paymentData.amount}`,
+      };
+
+      console.log('Purchase payment requirement:', paymentRequirement);
+
+      // Create and sign payment authorization
+      const paymentPayload = await this.createPaymentAuthorization(
+        walletClient,
+        paymentRequirement,
+        usdcAmount.toString()
+      );
+
+      console.log('Purchase payment payload created:', paymentPayload);
+
+      // Submit to x402 facilitator
+      const result = await this.submitToFacilitator(paymentPayload);
+
+      if (result.success) {
+        return {
+          success: true,
+          txHash: result.transaction,
+        };
+      } else {
+        return {
+          success: false,
+          error: `x402 facilitator rejected purchase payment: ${result.errors?.join(', ')}`,
+        };
+      }
+    } catch (error) {
+      console.error('x402 purchase payment failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown purchase payment error',
+      };
+    }
+  }
+
+  /**
+   * Process refund payment through x402 protocol
+   * Seller sends USDC back to buyer for a purchase refund
+   */
+  async processRefundPayment(
+    walletClient: any,
+    refundData: RefundPaymentData
+  ): Promise<PaymentResult> {
+    try {
+      console.log('Processing x402 refund payment...', refundData);
+
+      // Convert USD amount to USDC
+      const usdcAmount = parseUnits(refundData.amount.toString(), USDC_DECIMALS);
+
+      // Create refund payment requirement - seller pays buyer back
+      const paymentRequirement: PaymentRequirement = {
+        scheme: 'exact',
+        network: 'polygon-amoy',
+        resource: `refund:${refundData.purchaseId}`,
+        payTo: refundData.buyerWallet, // Refund goes to buyer
+        maxAmountRequired: usdcAmount.toString(),
+        description: `Refund for "${refundData.productTitle}" - $${refundData.amount}${refundData.reason ? ` (${refundData.reason})` : ''}`,
+      };
+
+      console.log('Refund payment requirement:', paymentRequirement);
+
+      // Create and sign payment authorization (seller signs to send refund)
+      const paymentPayload = await this.createPaymentAuthorization(
+        walletClient,
+        paymentRequirement,
+        usdcAmount.toString()
+      );
+
+      console.log('Refund payment payload created:', paymentPayload);
+
+      // Submit to x402 facilitator
+      const result = await this.submitToFacilitator(paymentPayload);
+
+      if (result.success) {
+        return {
+          success: true,
+          txHash: result.transaction,
+        };
+      } else {
+        return {
+          success: false,
+          error: `x402 facilitator rejected refund payment: ${result.errors?.join(', ')}`,
+        };
+      }
+    } catch (error) {
+      console.error('x402 refund payment failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown refund payment error',
+      };
+    }
   }
 
   /**
