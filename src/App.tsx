@@ -8,6 +8,7 @@ import { WalletProvider } from './contexts/WalletContext';
 import { config } from './config/wagmi';
 
 import { Header } from './components/Header';
+import { NetworkStatus } from './components/NetworkStatus';
 import Marketplace from './views/Marketplace';
 import ProductListing from './views/ProductListing';
 import Profile from './views/Profile';
@@ -28,6 +29,7 @@ function App() {
               <Router>
                 <div className="app">
                   <Header />
+                  <NetworkStatus />
                   <main className="main-content">
                     <Routes>
                       <Route path="/" element={<Marketplace />} />
