@@ -190,24 +190,37 @@ export const api = {
         payment_tx_hash: paymentResult.txHash,
       };
 
-      // Temporary: Skip database insertion for x402 payment testing
-      console.log('✅ Payment successful! Product would be saved:', newProduct);
+      // Save product to database
+      console.log('✅ Payment successful! Saving product to database:', newProduct);
       console.log('💰 Payment TX Hash:', paymentResult.txHash);
 
-      // Simulate successful database insertion
-      const insertedProduct = {
-        ...newProduct,
-        created_at: new Date().toISOString(),
-      };
+      const { data: insertedProduct, error: insertError } = await supabase
+        .from('products')
+        .insert([newProduct])
+        .select()
+        .single();
 
-      // Log payment record (would be saved to database)
-      console.log('💾 Payment record:', {
-        product_id: newProduct.product_id,
-        seller_wallet: productData.seller_wallet,
-        tx_hash: paymentResult.txHash,
-        amount: LISTING_FEE_USD,
-        verified: true,
-      });
+      if (insertError) {
+        console.error('Database insertion error:', insertError);
+        throw new Error(`Failed to save product to database: ${insertError.message}`);
+      }
+
+      // Save payment record
+      console.log('💾 Saving payment record to database');
+      const { error: paymentError } = await supabase
+        .from('listing_payments')
+        .insert([{
+          product_id: newProduct.product_id,
+          seller_wallet: productData.seller_wallet,
+          tx_hash: paymentResult.txHash,
+          amount: LISTING_FEE_USD,
+          verified: true,
+        }]);
+
+      if (paymentError) {
+        console.error('Payment record insertion error:', paymentError);
+        // Don't throw error for payment record - product is already saved
+      }
 
       return {
         success: true,
@@ -277,6 +290,43 @@ export const api = {
       return {
         success: false,
         products: [],
+      };
+    }
+  },
+
+  async uploadFile(file: File): Promise<{ success: boolean; url?: string; error?: string }> {
+    try {
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 11)}_${file.name}`;
+
+      const { error } = await supabase.storage
+        .from('product-files-2')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error('File upload error:', error);
+        return {
+          success: false,
+          error: `Upload failed: ${error.message}`,
+        };
+      }
+
+      // Get public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('product-files-2')
+        .getPublicUrl(fileName);
+
+      return {
+        success: true,
+        url: publicUrlData.publicUrl,
+      };
+    } catch (error) {
+      console.error('File upload failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'File upload failed',
       };
     }
   },

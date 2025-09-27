@@ -2,7 +2,11 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import { ethers } from 'ethers';
+import { config } from 'dotenv';
 import { PaymentPayload } from './types.js';
+
+// Load environment variables
+config();
 
 const app = express();
 app.use(cors());
@@ -129,10 +133,7 @@ app.post('/settle', async (req: any, res: any) => {
     try {
       const provider = new ethers.JsonRpcProvider(AMOY_RPC_URL);
       const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
-      const tokenAddress = process.env.AMOY_USDC_ADDRESS || '';
-      if (!tokenAddress) {
-        throw new Error('AMOY_USDC_ADDRESS not set for real settlement');
-      }
+      const tokenAddress = AMOY_USDC_ADDRESS;
       // Minimal ABI for EIP-3009 transferWithAuthorization
       const tokenAbi = [
         'function transferWithAuthorization(address from,address to,uint256 value,uint256 validAfter,uint256 validBefore,bytes32 nonce,bytes signature)'

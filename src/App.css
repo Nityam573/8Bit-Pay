@@ -98,27 +98,47 @@ body {
 /* Main content */
 .main-content {
   flex: 1;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
   width: 100%;
+  padding: 2rem 4rem;
+  min-height: calc(100vh - 120px);
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
 }
 
 /* Page header */
 .page-header {
-  margin-bottom: 2rem;
+  margin-bottom: 3rem;
   text-align: center;
+  background: linear-gradient(135deg, var(--brand-orange) 0%, var(--brand-orange-700) 100%);
+  color: white;
+  padding: 3rem 2rem;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(244, 122, 11, 0.3);
+  animation: fadeInUp 0.6s ease-out;
 }
 
 .page-header h2 {
-  font-size: 2rem;
-  margin-bottom: 0.5rem;
-  color: #333;
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: white;
+  font-weight: 700;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .page-header p {
-  color: #666;
-  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1.2rem;
+  font-weight: 500;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Connect prompt */
@@ -191,23 +211,57 @@ body {
 /* Marketplace styles */
 .assets-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 2rem;
   margin-top: 2rem;
+  animation: fadeIn 0.8s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .asset-card {
   background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  border: 1px solid rgba(244, 122, 11, 0.1);
+  animation: slideInUp 0.6s ease-out;
+  animation-fill-mode: both;
 }
 
+/* Staggered animation delays for cards */
+.asset-card:nth-child(1) { animation-delay: 0.1s; }
+.asset-card:nth-child(2) { animation-delay: 0.2s; }
+.asset-card:nth-child(3) { animation-delay: 0.3s; }
+.asset-card:nth-child(4) { animation-delay: 0.4s; }
+.asset-card:nth-child(5) { animation-delay: 0.5s; }
+.asset-card:nth-child(6) { animation-delay: 0.6s; }
+.asset-card:nth-child(n+7) { animation-delay: 0.7s; }
+
 .asset-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(244, 122, 11, 0.15);
+  border-color: var(--brand-orange);
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .asset-card.owned {
@@ -612,16 +666,30 @@ body {
 /* Asset Listing styles */
 .listing-container {
   display: grid;
-  grid-template-columns: 1fr 400px;
-  gap: 2rem;
-  margin-top: 2rem;
+  grid-template-columns: 1fr 450px;
+  gap: 3rem;
+  margin-top: 3rem;
+  animation: fadeInUp 0.8s ease-out;
 }
 
 .listing-form-container {
   background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 3rem;
+  border-radius: 20px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(244, 122, 11, 0.1);
+  animation: slideInLeft 0.8s ease-out;
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .listing-form {
@@ -690,10 +758,25 @@ body {
 /* Preview styles */
 .preview-container {
   background: white;
-  padding: 2rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 2.5rem;
+  border-radius: 20px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
   height: fit-content;
+  border: 1px solid rgba(244, 122, 11, 0.1);
+  animation: slideInRight 0.8s ease-out;
+  position: sticky;
+  top: 2rem;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .preview-container h3 {
@@ -969,6 +1052,12 @@ body {
 }
 
 /* Responsive design */
+@media (max-width: 1200px) {
+  .main-content {
+    padding: 2rem;
+  }
+}
+
 @media (max-width: 768px) {
   .header-content {
     flex-direction: column;
@@ -982,6 +1071,14 @@ body {
 
   .main-content {
     padding: 1rem;
+  }
+
+  .page-header {
+    padding: 2rem 1rem;
+  }
+
+  .page-header h2 {
+    font-size: 2rem;
   }
 
   .assets-grid {

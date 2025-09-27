@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useWallet } from '../contexts/WalletContext';
 import { api, LISTING_FEE_USD } from '../services/api';
+import { supabase } from '../config/supabase';
 
 export default function ProductListing() {
   const { isConnected, address, walletClient } = useWallet();
@@ -81,25 +82,29 @@ export default function ProductListing() {
       // Step 3: Upload file if provided
       let fileUrl = '';
       if (formData.file && response.product) {
-        console.log('Uploading file...');
-        // Simulate file upload progress
-        const uploadInterval = setInterval(() => {
-          setUploadProgress(prev => {
-            if (prev >= 90) {
-              clearInterval(uploadInterval);
-              return 90;
-            }
-            return prev + 5;
-          });
-        }, 200);
+        console.log('Uploading file to Supabase storage...');
 
-        // In a real implementation, you would upload the file to a storage service
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        clearInterval(uploadInterval);
-        fileUrl = `https://example.com/files/${formData.file.name}`;
+        // Upload file to Supabase storage
+        const uploadResult = await api.uploadFile(formData.file);
 
-        // Update product with file URL (you might want to create an updateProduct API method)
+        if (!uploadResult.success) {
+          throw new Error(`File upload failed: ${uploadResult.error}`);
+        }
+
+        fileUrl = uploadResult.url || '';
         console.log('File uploaded successfully:', fileUrl);
+
+        // Update product with file URL in database
+        if (fileUrl) {
+          const { error: updateError } = await supabase
+            .from('products')
+            .update({ file_url: fileUrl })
+            .eq('product_id', response.product.product_id);
+
+          if (updateError) {
+            console.error('Failed to update product with file URL:', updateError);
+          }
+        }
       }
 
       setUploadProgress(100);
